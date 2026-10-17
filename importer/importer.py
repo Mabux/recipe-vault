@@ -489,6 +489,21 @@ def unique_path(slug: str) -> Path:
     return folder / f"{day}-{candidate}.md"
 
 
+def pdf_pages(md: str) -> list[int] | None:
+    """Pages named in the Quelle line ("PDF, S. 12" or "S. 12–13"), None if not stated."""
+    m = re.search(r"S\. (\d+)(?:[–-](\d+))?", md.split("## Quelle")[-1])
+    return list(range(int(m[1]), int(m[2] or m[1]) + 1)) if m else None
+
+
+def inbox_source(meta: dict) -> Path | None:
+    """The inbox file a recipe was imported from, if it is still there."""
+    rel = str(meta.get("source_file") or "")
+    if not rel.startswith("OneDrive Rezepte/"):
+        return None  # app uploads are stored under generated names
+    path = INBOX / rel.removeprefix("OneDrive Rezepte/")
+    return path if path.is_file() else None
+
+
 def find_image(meta: dict, md: str, source: Path | None):
     """(webp bytes, image_source) from the recipe page or the source PDF, else None.
     No automatic stock-photo search: a wrong dish photo is worse than none."""
@@ -498,9 +513,7 @@ def find_image(meta: dict, md: str, source: Path | None):
             if got:
                 return images.to_webp(got[0]), str(meta["source_url"])
         if source and source.suffix.lower() == ".pdf":
-            m = re.search(r"S\. (\d+)(?:[–-](\d+))?", md.split("## Quelle")[-1])
-            pages = list(range(int(m[1]), int(m[2] or m[1]) + 1)) if m else None
-            got = images.from_pdf(source, pages)
+            got = images.from_pdf(source, pdf_pages(md))
             if got:
                 return images.to_webp(got[0]), f"{meta['source_file']}, {got[1]}"
     except Exception as e:
@@ -803,6 +816,15 @@ def find_photo(client, job: dict, md: str) -> None:
         got = images.from_url(url)
         if got:
             return save_candidate(job, images.to_webp(got[0]), url)
+    pdf = inbox_source(meta)
+    if pdf and pdf.suffix.lower() == ".pdf":
+        job["step"] = "Foto im PDF suchen …"
+        got = images.from_pdf(pdf, pdf_pages(md))
+        label = f"{meta['source_file']}, {got[1]}" if got else ""
+        if got and label not in exclude and label != str(meta.get("image_source") or ""):
+            return save_candidate(job, images.to_webp(got[0]), label)
+    if over_hourly_limit():  # only the Commons search below costs a Claude call
+        raise Rejected(f"Zu viele KI-Aufträge (max. {MAX_JOBS_PER_HOUR} pro Stunde) – später noch einmal versuchen.")
     job["step"] = "Foto bei Wikimedia Commons suchen …"
     ingredients = section(md, "Zutaten|Ingredients")[:1500]
     queries = claude_json(client, "You suggest search terms for finding a photo of a dish on Wikimedia Commons.",
@@ -894,6 +916,16 @@ JOB_QUEUE: "queue.Queue[str]" = queue.Queue()
 RECENT: list[float] = []
 
 
+def over_hourly_limit() -> bool:
+    """True if MAX_JOBS_PER_HOUR costly jobs ran in the last hour; otherwise counts this one."""
+    t = time.time()
+    RECENT[:] = [x for x in RECENT if t - x < 3600]
+    if len(RECENT) >= MAX_JOBS_PER_HOUR:
+        return True
+    RECENT.append(t)
+    return False
+
+
 def known_import(state: dict, key: str | None = None, sha: str | None = None):
     """Earlier import of the same URL key or file content, if any."""
     for k, e in state["files"].items():
@@ -913,7 +945,8 @@ def new_job(kind: str, label: str, key: str, **extra) -> dict:
 
 EDIT_KINDS = {"edit/ai": "ai-edit", "edit/save": "save", "image/find": "image-find",
               "image/generate": "image-gen", "image/accept": "image-accept", "image/upload": "image-upload"}
-COSTLY = {"ai-edit", "image-find", "image-gen"}  # count against MAX_JOBS_PER_HOUR
+# count against MAX_JOBS_PER_HOUR when requested; image-find only when it needs Claude (find_photo)
+COSTLY = {"ai-edit", "image-gen"}
 
 
 def run_job(client, state: dict, job: dict) -> None:
@@ -990,12 +1023,7 @@ class Api(BaseHTTPRequestHandler):
         return out
 
     def rate_limited(self) -> bool:
-        t = time.time()
-        RECENT[:] = [x for x in RECENT if t - x < 3600]
-        if len(RECENT) >= MAX_JOBS_PER_HOUR:
-            return True
-        RECENT.append(t)
-        return False
+        return over_hourly_limit()
 
     def already(self, hit) -> None:
         k, e = hit

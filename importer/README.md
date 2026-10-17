@@ -13,7 +13,7 @@ Alle 5 Minuten (`INTERVAL`) wird der Ordner gescannt. Eine Datei wird verarbeite
 1. Claude (`claude-opus-5-5`) bekommt die Datei: PDF als Dokument, Fotos als Bild (auch HEIC), DOCX/XLSX/TXT/MD als Text – dazu die Regeln aus `prompt.md` und die Liste der vorhandenen Titel (Duplikatprüfung).
 2. Antwort: ein oder mehrere Rezepte (Sammel-PDFs werden aufgeteilt) oder „überspringen“ mit Grund.
 3. Prüfung: Frontmatter, Kategorie, Zutaten-Abschnitt, eindeutiger Slug. `source_file` wird erzwungen.
-4. Foto: von der Rezeptseite (`source_url`: og:image bzw. YouTube-/TikTok-Vorschaubild) oder das größte Foto auf der Rezeptseite des PDFs (`images.py`). Gibt es keins, bekommt das Rezept keins – Eintrag „ohne Foto“ im Bericht, dann von Hand ergänzen (keine automatische Stockfoto-Suche, ein falsches Gericht wäre schlimmer).
+4. Foto: von der Rezeptseite (`source_url`: og:image bzw. YouTube-/TikTok-Vorschaubild) oder das größte Foto auf der Rezeptseite des PDFs (`images.py`; auch kleine Kopfzeilen-Fotos ab 400×150 px aus komprimierten Kochbüchern; hat die Rezeptseite keins, eine reine Fotoseite direkt davor). Gibt es keins, bekommt das Rezept keins – Eintrag „ohne Foto“ im Bericht, dann von Hand ergänzen (keine automatische Stockfoto-Suche, ein falsches Gericht wäre schlimmer).
 5. Ein Commit pro Rezept (`recipe: add …`) inkl. Foto und `INDEX.md`, dann Push. `INDEX.md` baut `scripts/build_index.py`, das im Image mitgeliefert wird – das Daten-Repo braucht dafür nichts.
 6. Übersprungenes, Fehlgeschlagenes und Rezepte ohne Foto stehen in **`IMPORT-REPORT.md`** im Daten-Repo.
 
@@ -41,6 +41,8 @@ Optional: `seed-done.txt` im Wurzelordner des Daten-Repos – Dateinamen aus dem
 - **Datei erneut importieren:** ihren Eintrag aus `data/state.json` löschen (oder die Datei umbenennen *und* inhaltlich ändern).
 - **Logs:** `BASE/data/importer.log` (rotiert, 1 MB × 4). Auf Synology bleibt das Log in Portainer leer (`db`-Log-Treiber) – dann diese Datei lesen.
 - **Code-Änderungen:** Portainer → Stack `recipe-vault-importer` → *Pull and redeploy*.
+- **Tests:** `pip install -r requirements.txt -r requirements-dev.txt`, dann `python -m pytest tests` (im Ordner `importer/`).
+- **Fotos nachträglich ergänzen:** `scripts/backfill_photos.py` (siehe Haupt-README, „Adding photos afterwards“).
 - **Lokal testen** (schreibt/pusht nichts): `DRY_RUN=1 ONCE=1 SETTLE_SECONDS=0 INBOX=… DATA=… REPO_URL=… ANTHROPIC_API_KEY_FILE=… python importer.py`
 
 ## Import aus der App
@@ -55,10 +57,10 @@ Kleine HTTP-Schnittstelle auf Port 8080 im Container (auf dem Host `API_HOST_POR
 | `POST /api/import/edit/ai` (`{"path", "markdown", "instruction"}`) | Rezept nach Anweisung von Claude überarbeiten lassen; Ergebnis (`markdown`, `message`) ist nur ein Vorschlag, gespeichert wird nichts |
 | `POST /api/import/edit/save` (`{"path", "base", "markdown"}`) | Bearbeitetes Rezept prüfen, committen, pushen. Abgelehnt, wenn die Datei nicht mehr `base` entspricht (anderswo geändert); `slug` bleibt immer gleich |
 | `POST /api/import/image/upload` (Body = Bild, Header `X-Recipe`, `X-Filename`) | Eigenes Foto: als WebP speichern, `image_source: "eigenes Foto"`, sofort committen |
-| `POST /api/import/image/find` (`{"path", "markdown", "exclude"}`) | Foto-Vorschlag: Bild der Quellseite, sonst Wikimedia Commons (Suchbegriffe von Claude). `exclude` = bereits gezeigte Quellen |
+| `POST /api/import/image/find` (`{"path", "markdown", "exclude"}`) | Foto-Vorschlag: Bild der Quellseite, sonst Foto aus dem Quell-PDF (wenn es noch im Eingangsordner liegt), sonst Wikimedia Commons (Suchbegriffe von Claude). `exclude` = bereits gezeigte Quellen |
 | `POST /api/import/image/generate` (`{"path", "markdown", "hint"}`) | Foto-Vorschlag von Gemini (`GEMINI_API_KEY`, `IMAGE_MODEL`) |
 | `GET /api/import/candidates/<id>.webp` | Vorschaubild eines Vorschlags (liegt 24 h in `data/candidates/`) |
 | `POST /api/import/image/accept` (`{"path", "candidate"}`) | Vorschlag als Foto übernehmen und committen; ein altes Foto, das kein anderes Rezept nutzt, wird gelöscht |
 | `GET /api/import/health` | `{"ok", "queue", "generate"}`; `generate` = Bild-KI eingerichtet |
 
-Aufträge laufen nacheinander und teilen sich mit dem OneDrive-Scan eine Sperre auf Arbeitskopie und `state.json`. Bereits importierte Dateien (gleicher Inhalt, auch aus OneDrive) und Links werden sofort als „bereits importiert“ beantwortet. Grenzen: `MAX_JOBS_PER_HOUR` (20, zählt Importe und KI-Aufträge beim Bearbeiten), `MAX_FILE_MB` (30). Übersprungenes landet hier nicht in `IMPORT-REPORT.md` – die App zeigt den Grund direkt an.
+Aufträge laufen nacheinander und teilen sich mit dem OneDrive-Scan eine Sperre auf Arbeitskopie und `state.json`. Bereits importierte Dateien (gleicher Inhalt, auch aus OneDrive) und Links werden sofort als „bereits importiert“ beantwortet. Grenzen: `MAX_JOBS_PER_HOUR` (20, zählt Importe und KI-Aufträge beim Bearbeiten; die Fotosuche nur, wenn sie Claude für die Commons-Suche braucht), `MAX_FILE_MB` (30). Übersprungenes landet hier nicht in `IMPORT-REPORT.md` – die App zeigt den Grund direkt an.

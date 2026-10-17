@@ -149,23 +149,37 @@ def page_content(url: str, max_text: int = 60_000) -> dict:
 
 def from_pdf(path, pages=None):
     """(image bytes, 'S. N') for the largest photo on the given 1-based pages, or None.
-    Images that repeat on several pages (logos, headers, page decorations) are ignored."""
+    Images that repeat on several pages (logos, headers, page decorations) are ignored.
+    If the recipe pages have no photo, a photo-only page right before them is used:
+    cookbooks often put the dish photo full-page opposite the recipe."""
     import pymupdf
     from collections import Counter
     doc = pymupdf.open(path)
     uses = Counter(im[0] for page in doc for im in page.get_images(full=True))
-    best = None
-    for pno in pages or range(1, doc.page_count + 1):
-        if not 1 <= pno <= doc.page_count:
-            continue
-        for im in doc[pno - 1].get_images(full=True):
-            xref, smask, w, h = im[0], im[1], im[2], im[3]
-            if min(w, h) < 250 or not 0.25 <= w / h <= 4.0:
-                continue  # icons, rules, QR codes
-            if doc.page_count > 2 and uses[xref] > 2:
-                continue  # same image on many pages: logo/branding
-            if best is None or w * h > best[0]:
-                best = (w * h, xref, smask, pno)
+
+    def best_on(page_numbers):
+        best = None
+        for pno in page_numbers:
+            if not 1 <= pno <= doc.page_count:
+                continue
+            for im in doc[pno - 1].get_images(full=True):
+                xref, smask, w, h = im[0], im[1], im[2], im[3]
+                # compressed books keep header photos at ~420x200, so the short side may be small
+                if max(w, h) < 400 or min(w, h) < 150 or not 0.25 <= w / h <= 4.0:
+                    continue  # icons, rules, QR codes
+                if doc.page_count > 2 and uses[xref] > 2:
+                    continue  # same image on many pages: logo/branding
+                if best is None or w * h > best[0]:
+                    best = (w * h, xref, smask, pno)
+        return best
+
+    def photo_only(pno):
+        # nothing but a page number: a section cover ("dessert") has words and is skipped
+        return 1 <= pno <= doc.page_count and not re.sub(r"[\d\s]", "", doc[pno - 1].get_text())
+
+    best = best_on(pages or range(1, doc.page_count + 1))
+    if not best and pages and photo_only(min(pages) - 1):
+        best = best_on([min(pages) - 1])
     if not best:
         return None
     _, xref, smask, pno = best

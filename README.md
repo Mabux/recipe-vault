@@ -59,7 +59,7 @@ An optional **AI importer** turns PDFs, photos, Word/Excel files and web links i
 - **Portion calculator.** It rescales the ingredient list, and also quantities inside the description and the steps, such as "200 g", "2 EL" or "3 eggs". Times, temperatures and sizes stay unchanged. Recipes without a serving count scale by a factor (½×, 1×, 1½× …).
 - **Cooking mode.** Shows the steps one at a time, lets you tick off ingredients, and keeps the screen on while you cook.
 - **Add recipes from the app** (**+ Rezept**): upload a file, paste a link, or paste the recipe text. The importer then processes it (requires the optional importer).
-- **Edit recipes from the app** (**Bearbeiten** on a recipe): change the Markdown directly, or tell Claude what to change ("2 Knoblauchzehen ergänzen") and review the result before saving. Add or replace the photo: upload your own, search one (source page, then Wikimedia Commons), or generate one with Google Gemini. Suggested photos are only saved after you accept them (requires the importer; generating needs `GEMINI_API_KEY`).
+- **Edit recipes from the app** (**Bearbeiten** on a recipe): change the Markdown directly, or tell Claude what to change ("2 Knoblauchzehen ergänzen") and review the result before saving. Add or replace the photo: upload your own, search one (source page, then the source PDF in the inbox, then Wikimedia Commons), or generate one with Google Gemini. Suggested photos are only saved after you accept them (requires the importer; generating needs `GEMINI_API_KEY`).
 - **Fast and offline-friendly.** All recipes are fetched as one small archive (about 100 KB) and cached in the browser. The app shows the cached state immediately and refreshes in the background. Photos load only when needed and are cached permanently.
 - **Installable on your home screen** (iOS/Android) with its own icon.
 - **No database and no build step.** The whole app is a single `index.html` with no dependencies.
@@ -425,6 +425,22 @@ After changing code in `app/` or `importer/`, use **Pull and redeploy** on the s
 
 To fix a recipe, open it in the app and tap **Bearbeiten** (needs the importer), or edit its Markdown file and push the change. Edits from the app are refused if the file was changed elsewhere in the meantime, so nothing is overwritten silently.
 
+### Adding photos afterwards
+
+Recipes without a photo can get one in bulk with `scripts/backfill_photos.py` (Python standard library only). It uses the same importer API as **Bearbeiten → Foto** in the app and works in two steps, so you can check every photo before it is saved:
+
+```bash
+python3 scripts/backfill_photos.py ../recipe-vault-data --api http://192.168.1.10:8095
+```
+
+This saves one suggestion per recipe without `image:` in `photo-preview/` and writes `photo-preview/index.html` to look through. Add `--generate recipes/2026/<file>.md` to have Gemini make the photo for a recipe that has no source photo. Then save the suggestions (one commit per recipe; `--skip <slug>` leaves one out):
+
+```bash
+python3 scripts/backfill_photos.py ../recipe-vault-data --api http://192.168.1.10:8095 --accept
+```
+
+Pull the data repo first, so the list of recipes is current.
+
 ---
 
 ## Keeping INDEX.md up to date
@@ -465,7 +481,7 @@ python3 scripts/build_index.py ../recipe-vault-data
 | `API_HOST_PORT` | `8099` | Host port of the import API |
 | `INTERVAL` | `300` | Seconds between folder scans |
 | `MAX_FILES_PER_SCAN` | `10` | Maximum files processed per scan |
-| `MAX_JOBS_PER_HOUR` | `20` | Maximum imports per hour from the app |
+| `MAX_JOBS_PER_HOUR` | `20` | Maximum imports and AI jobs per hour from the app (photo search counts only when it has to ask Claude) |
 | `MODEL` | `claude-opus-5-5` | Claude model used for conversion |
 | `EFFORT` | `medium` | Reasoning effort for the model |
 | `GEMINI_API_KEY` | *(empty)* | Google Gemini API key for **KI-Bild generieren** when editing a recipe. Without it the button is hidden |

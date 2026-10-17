@@ -24,3 +24,6 @@ Thumbs.db
 
 # Claude Code local files (settings, planning notes, test output)
 .claude/
+
+# Photo previews of scripts/backfill_photos.py
+photo-preview/
