@@ -1,0 +1,1125 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rezepte</title>
+<meta name="theme-color" content="#f6f3ee" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16140f" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/icons/icon-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="apple-mobile-web-app-title" content="Rezepte">
+<style>
+:root {
+  --bg: #f6f3ee; --surface: #fffdf9; --ink: #1f1c17; --muted: #6f685d;
+  --line: #e4ded3; --accent: #b4532a; --accent-ink: #fff; --chip: #efe9df;
+  --done: #a39b8e; --radius: 14px;
+  --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #16140f; --surface: #1f1c16; --ink: #efe9df; --muted: #a39b8e;
+    --line: #34302a; --accent: #e07a4c; --accent-ink: #16140f; --chip: #2a2620;
+    --done: #6f685d;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); }
+body { line-height: 1.5; -webkit-text-size-adjust: 100%; }
+a { color: var(--accent); }
+button, input, select { font: inherit; color: inherit; }
+.wrap { max-width: 1100px; margin: 0 auto; padding: 16px; padding-bottom: 48px; }
+h1, h2, h3 { font-family: var(--serif); font-weight: 600; line-height: 1.2; margin: 0; }
+
+/* header + filters */
+.top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 12px; margin: 8px 0 16px; }
+.top h1 { font-size: 30px; }
+.top h1 .ver { font-family: var(--font); font-size: 12px; font-weight: 400; color: var(--muted); margin-left: 8px; letter-spacing: .02em; }
+.count { color: var(--muted); font-size: 14px; }
+.search { width: 100%; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--surface); font-size: 16px; outline: none; }
+.search:focus { border-color: var(--accent); }
+.search-wrap { position: relative; }
+.search-wrap .search { padding-right: 46px; }
+.search::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
+.search-clear { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 34px; height: 34px;
+  border: 0; border-radius: 50%; background: var(--chip); color: var(--muted); font-size: 20px; line-height: 1;
+  cursor: pointer; display: grid; place-items: center; }
+.search-clear:hover { color: var(--ink); }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 20px; }
+.filters select, .filters input { padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--surface); font-size: 14px; min-width: 0; }
+.filters input { width: 140px; }
+.filters .reset { border: 0; background: none; color: var(--accent); cursor: pointer; padding: 8px 4px; font-size: 14px; }
+
+/* cards */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  overflow: hidden; text-decoration: none; color: inherit; display: flex; flex-direction: column;
+  transition: transform .12s ease, box-shadow .12s ease; }
+.card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgb(0 0 0 / .08); }
+.thumb { aspect-ratio: 16/9; background: var(--chip); display: grid; place-items: center;
+  font-family: var(--serif); font-size: 44px; color: var(--muted); overflow: hidden; }
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.card-body { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+.card h2 { font-size: 18px; }
+.meta { color: var(--muted); font-size: 13px; display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 6px; }
+.chip { background: var(--chip); border-radius: 999px; padding: 2px 9px; font-size: 12px; color: var(--muted); }
+/* index view */
+.view { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+.view button { border: 0; background: var(--surface); padding: 5px 12px; font-size: 13px; cursor: pointer; color: var(--muted); }
+.view button.on { background: var(--accent); color: var(--accent-ink); }
+.top-right { display: flex; align-items: center; gap: 12px; }
+.index { columns: 3 240px; column-gap: 32px; }
+.index section { break-inside: avoid; margin-bottom: 14px; }
+.index h2 { font-size: 18px; color: var(--accent); border-bottom: 1px solid var(--line); padding-bottom: 2px; margin-bottom: 4px; }
+.index ul { list-style: none; padding: 0; margin: 0; }
+.index a { display: block; padding: 3px 0; color: var(--ink); text-decoration: none; }
+.index a:hover { color: var(--accent); }
+.empty, .msg { color: var(--muted); padding: 40px 0; text-align: center; }
+
+/* detail */
+.back { display: inline-block; margin: 4px 0 14px; text-decoration: none; font-size: 15px; }
+.hero { border-radius: var(--radius); overflow: hidden; margin-bottom: 18px; max-height: 360px; }
+.hero img { width: 100%; height: 100%; max-height: 360px; object-fit: cover; display: block; }
+.credit { margin: -12px 0 16px; font-size: 12px; color: var(--muted); }
+.credit a { color: inherit; }
+.detail h1 { font-size: 32px; margin-bottom: 8px; }
+.lead { color: var(--muted); margin: 6px 0 14px; }
+.facts { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 20px; }
+.fact { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 6px 12px; font-size: 14px; }
+.fact b { display: block; font-size: 16px; }
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); gap: 28px; }
+.cols h2 { font-size: 20px; margin: 0 0 10px; }
+.cols h3 { font-family: var(--font); font-size: 13px; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--muted); margin: 14px 0 4px; }
+.ing { list-style: none; padding: 0; margin: 0; }
+.ing-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.cols .ing-head h2 { margin: 0; }
+.orig { font-size: 13px; color: var(--muted); margin: -4px 0 6px; }
+.scaler button[disabled] { opacity: .35; cursor: default; }
+.scaler b { white-space: nowrap; }
+.ing li { padding: 6px 0; border-bottom: 1px solid var(--line); }
+.steps { padding-left: 22px; margin: 0; }
+.steps li { margin-bottom: 12px; padding-left: 4px; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 4px 0 20px; }
+.btn { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 999px;
+  padding: 10px 20px; font-weight: 600; cursor: pointer; text-decoration: none; font-size: 15px; }
+.btn.ghost { background: var(--chip); color: var(--ink); font-weight: 500; }
+.src { font-size: 14px; color: var(--muted); }
+
+/* cook mode */
+.cook { position: fixed; inset: 0; background: var(--bg); overflow-y: auto; z-index: 10; }
+.cook .wrap { max-width: 900px; }
+.cook-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
+.cook-top h1 { font-size: 22px; }
+.scaler { display: flex; align-items: center; gap: 8px; font-size: 15px; color: var(--muted); }
+.scaler button { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line);
+  background: var(--surface); cursor: pointer; font-size: 18px; }
+.scaler b { color: var(--ink); min-width: 1.5em; text-align: center; font-size: 18px; }
+.cook-ing { list-style: none; padding: 0; margin: 0 0 24px; columns: 2 260px; column-gap: 24px; }
+.cook-ing li { break-inside: avoid; }
+.cook-ing h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+  margin: 10px 0 4px; font-family: var(--font); }
+.cook-ing label { display: flex; gap: 10px; align-items: flex-start; padding: 7px 0; font-size: 19px; cursor: pointer; }
+.cook-ing input { width: 22px; height: 22px; margin-top: 3px; accent-color: var(--accent); flex: none; }
+.cook-ing input:checked + span { color: var(--done); text-decoration: line-through; }
+.stepbox { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; }
+.stepno { color: var(--accent); font-weight: 700; font-size: 14px; letter-spacing: .06em; text-transform: uppercase; }
+.steptext { font-size: 26px; line-height: 1.45; margin: 8px 0 0; font-family: var(--serif); }
+.nav { display: flex; gap: 10px; margin-top: 16px; }
+.nav .btn { flex: 1; padding: 16px; font-size: 18px; }
+.nav .btn[disabled] { opacity: .35; cursor: default; }
+.dots { display: flex; gap: 6px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
+.dots button { width: 10px; height: 10px; border-radius: 50%; border: 0; padding: 0; background: var(--line); cursor: pointer; }
+.dots button.on { background: var(--accent); }
+.hint { text-align: center; color: var(--muted); font-size: 13px; margin-top: 12px; }
+
+/* add recipe */
+.add-btn { border: 0; background: var(--accent); color: var(--accent-ink); border-radius: 999px; padding: 6px 14px;
+  font-size: 14px; font-weight: 600; cursor: pointer; }
+.add { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--ink);
+  padding: 0; width: min(520px, calc(100vw - 32px)); }
+.add::backdrop { background: rgb(0 0 0 / .45); }
+.add form { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.add h2 { font-size: 22px; }
+.add .tabs { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; align-self: flex-start; }
+.add .tabs button { border: 0; background: var(--surface); padding: 6px 16px; cursor: pointer; color: var(--muted); font-size: 14px; }
+.add .tabs button.on { background: var(--accent); color: var(--accent-ink); }
+.drop { border: 2px dashed var(--line); border-radius: var(--radius); padding: 26px 16px; text-align: center; color: var(--muted);
+  cursor: pointer; font-size: 15px; }
+.drop.over, .drop:focus-visible { border-color: var(--accent); color: var(--ink); outline: none; }
+.drop b { color: var(--ink); display: block; margin-bottom: 4px; word-break: break-all; }
+.add input[type=url], .add textarea { width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--bg); color: var(--ink); font: inherit; font-size: 16px; }
+.add textarea { min-height: 220px; max-height: 55vh; resize: vertical; line-height: 1.4; }
+.add .note { font-size: 13px; color: var(--muted); margin: 0; }
+.add .row { display: flex; gap: 10px; justify-content: flex-end; align-items: center; flex-wrap: wrap; }
+.add .status { margin-right: auto; font-size: 14px; color: var(--muted); }
+.add .status.err { color: var(--accent); }
+.add .result a { font-weight: 600; }
+.add h2.ok { color: var(--ink); }
+.add h2.err { color: var(--accent); }
+.res-body p { margin: 0 0 8px; }
+.res-links a { font-weight: 600; font-size: 17px; }
+.spin { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--line); border-top-color: var(--accent);
+  border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -1px; margin-right: 6px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+[hidden] { display: none !important; }
+
+/* edit recipe */
+.edit h1 { font-size: 28px; }
+.ebox { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px;
+  margin: 0 0 16px; display: flex; flex-direction: column; gap: 12px; }
+.ebox h2 { font-size: 20px; margin: 0; }
+.ebox .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ebox .btn { padding: 8px 16px; font-size: 14px; }
+.ebox input[type=text] { flex: 1 1 220px; min-width: 0; padding: 9px 12px; border: 1px solid var(--line);
+  border-radius: 10px; background: var(--bg); font-size: 16px; }
+.ephoto { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 300px)); gap: 12px; }
+.ephoto figure { margin: 0; }
+.ephoto img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 10px; display: block; background: var(--chip); }
+.ephoto figcaption { font-size: 12px; color: var(--muted); margin-top: 4px; overflow-wrap: anywhere; }
+.ephoto .none { aspect-ratio: 4 / 3; border-radius: 10px; background: var(--chip); color: var(--muted);
+  display: grid; place-items: center; font-size: 14px; }
+.ecand figcaption b { color: var(--accent); }
+.edit textarea { width: 100%; min-height: 55vh; padding: 12px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--bg); color: var(--ink); font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; resize: vertical; }
+.edit .note { font-size: 13px; color: var(--muted); margin: 0; }
+.linkbtn { border: 0; background: none; color: var(--accent); padding: 0; cursor: pointer; text-decoration: underline; font-size: inherit; }
+.ebar { position: sticky; bottom: 0; background: var(--bg); border-top: 1px solid var(--line); padding: 12px 0;
+  display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.ebar .status { margin-right: auto; font-size: 14px; color: var(--muted); }
+.ebar .status.err { color: var(--accent); }
+.edit button[disabled] { opacity: .5; cursor: default; }
+
+@media (max-width: 700px) {
+  .cols { grid-template-columns: 1fr; }
+  .detail h1 { font-size: 26px; }
+  .steptext { font-size: 22px; }
+  .filters input { width: calc(50% - 4px); }
+  .filters select { flex: 1 1 calc(50% - 4px); }
+}
+</style>
+</head>
+<body>
+<div id="app" class="wrap"><p class="msg">Lade Rezepte …</p></div>
+
+<script>
+"use strict";
+/* ---------- data loading --------------------------------------------------
+   /gitea/archive     -> whole branch as .tar.gz, one request (main path)
+   /gitea/tree        -> Gitea git tree         } fallback if the archive
+   /gitea/blob/<sha>  -> one file as base64     } can't be fetched/unpacked
+   All via nginx, token added server-side. The last result is kept in
+   localStorage so the app opens instantly and refreshes in the background.
+*/
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+};
+const CACHE_KEY = "rv:files";
+// App version, shown next to the heading. Bump on every user-facing change to app/.
+const APP_VERSION = "1.2.0";
+try {  // per-blob cache of the old loader
+  Object.keys(localStorage).filter(k => k.startsWith("rv:blob:")).forEach(k => localStorage.removeItem(k));
+} catch {}
+
+async function getJSON(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`);
+  return r.json();
+}
+
+function b64utf8(b64) {
+  const bin = atob(b64.replace(/\s/g, ""));
+  return new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0)));
+}
+
+const isRecipe = path => path.startsWith("recipes/") && path.endsWith(".md");
+
+/* tar.gz -> { "recipes/…md": text }. git archive writes ustar (name + prefix
+   fields) and pax "x" records for long paths; first path segment is the
+   repo name and gets stripped. */
+async function fetchArchive() {
+  const r = await fetch("/gitea/archive");
+  if (!r.ok) throw new Error(`/gitea/archive: HTTP ${r.status}`);
+  const buf = new Uint8Array(await new Response(
+    r.body.pipeThrough(new DecompressionStream("gzip"))).arrayBuffer());
+  const dec = new TextDecoder(), files = {};
+  const str = (o, n) => dec.decode(buf.subarray(o, o + n)).replace(/\0[\s\S]*$/, "");
+  let paxPath = null;
+  for (let o = 0; o + 512 <= buf.length && buf[o];) {
+    const size = parseInt(str(o + 124, 12).trim() || "0", 8);
+    const type = String.fromCharCode(buf[o + 156]), body = o + 512;
+    const prefix = str(o + 345, 155), name = prefix ? `${prefix}/${str(o, 100)}` : str(o, 100);
+    if (type === "x") {
+      paxPath = (dec.decode(buf.subarray(body, body + size)).match(/\d+ path=([^\n]*)\n/) || [])[1] || null;
+    } else {
+      const path = (paxPath || name).replace(/^[^/]+\//, "");
+      if ((type === "0" || type === "\0") && isRecipe(path)) files[path] = dec.decode(buf.subarray(body, body + size));
+      if (type !== "g") paxPath = null;
+    }
+    o = body + Math.ceil(size / 512) * 512;
+  }
+  if (!Object.keys(files).length) throw new Error("archive contained no recipes");
+  return files;
+}
+
+async function fetchBlobs() {
+  const tree = await getJSON("/gitea/tree");
+  const files = {};
+  await Promise.all((tree.tree || []).filter(t => t.type === "blob" && isRecipe(t.path)).map(async f => {
+    files[f.path] = b64utf8((await getJSON("/gitea/blob/" + f.sha)).content);
+  }));
+  return files;
+}
+
+async function fetchFiles() {
+  try { return await fetchArchive(); }
+  catch (e) { console.warn("archive load failed, falling back to single files:", e); return fetchBlobs(); }
+}
+
+function toRecipes(files) {
+  return Object.entries(files).map(([path, md]) => parseRecipe(md, path))
+    .sort((a, b) => String(b.captured_at || b.path).localeCompare(String(a.captured_at || a.path)));
+}
+
+/* ---------- markdown parsing (read-only, files are never changed) -------- */
+function scalar(v) {
+  v = v.trim();
+  if (v.length >= 2 && v[0] === v.at(-1) && `"'`.includes(v[0])) return v.slice(1, -1);
+  if (v.startsWith("[") && v.endsWith("]"))
+    return v.slice(1, -1).split(",").map(s => s.trim()).filter(Boolean).map(scalar);
+  if (/^-?\d+(\.\d+)?$/.test(v)) return Number(v);
+  return v;
+}
+
+function parseFrontmatter(text) {
+  const meta = {}; let parent = null;
+  for (const line of text.split("\n")) {
+    const m = line.match(/^(\s*)([\w-]+):\s*(.*)$/);
+    if (!m) continue;
+    const [, indent, key, val] = m;
+    if (indent && parent) meta[parent][key] = scalar(val);
+    else if (val === "") { parent = key; meta[key] = {}; }
+    else { parent = null; meta[key] = scalar(val); }
+  }
+  return meta;
+}
+
+function parseRecipe(md, path) {
+  md = md.replace(/\r\n/g, "\n");
+  let meta = {}, body = md;
+  const fm = md.match(/^---\s*\n([\s\S]*?)\n---\s*\n?([\s\S]*)$/);
+  if (fm) { meta = parseFrontmatter(fm[1]); body = fm[2]; }
+
+  let title = null, section = null, group = null;
+  const desc = [], ingredients = [], steps = [];
+  for (const raw of body.split("\n")) {
+    const line = raw.trimEnd();
+    if (line.startsWith("# ") && title === null) { title = line.slice(2).trim(); continue; }
+    if (line.startsWith("## ")) {
+      const name = line.slice(3).trim().toLowerCase();
+      section = ["zutaten", "ingredients"].includes(name) ? "ing"
+        : ["zubereitung", "instructions", "steps", "method", "anleitung"].includes(name) ? "steps" : "other";
+      group = null; continue;
+    }
+    if (section === null) { if (line.trim()) desc.push(line.trim()); }
+    else if (section === "ing") {
+      if (line.startsWith("### ")) group = line.slice(4).trim();
+      else if (/^\s*[-*]\s+/.test(line)) {
+        const item = line.replace(/^\s*[-*]\s+/, "").replace(/\s{2,}/g, " ").trim();
+        if (item.endsWith(":") && item.length < 40) group = item.slice(0, -1);
+        else ingredients.push({ group, text: item });
+      }
+    } else if (section === "steps") {
+      const s = line.match(/^\s*(\d+[.)]|[-*])\s+(.*)$/);
+      if (s) steps.push(s[2].trim());
+      else if (line.trim() && steps.length) steps[steps.length - 1] += " " + line.trim();
+    }
+  }
+  const slug = meta.slug || path.split("/").pop().replace(/\.md$/, "");
+  const kw = meta.keywords;
+  return {
+    ...meta, slug, path, md,
+    title: meta.title || title || slug,
+    keywords: Array.isArray(kw) ? kw.map(String) : kw ? [String(kw)] : [],
+    description: desc.join(" "),
+    ingredients, steps,
+    nutrition: typeof meta.nutrition === "object" ? meta.nutrition : {},
+  };
+}
+
+/* ---------- helpers ------------------------------------------------------- */
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const norm = s => String(s ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+
+function minutes(iso) {           // PT1H15M, P0DT0H35M -> 75
+  const m = String(iso || "").match(/^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?)?/);
+  if (!m) return null;
+  const t = (+m[1] || 0) * 1440 + (+m[2] || 0) * 60 + (+m[3] || 0);
+  return t || null;
+}
+function fmtMin(t) {
+  if (!t) return null;
+  const h = Math.floor(t / 60), m = t % 60;
+  return h ? (m ? `${h} h ${m} min` : `${h} h`) : `${m} min`;
+}
+function totalMin(r) {
+  return minutes(r.total_time) || ((minutes(r.prep_time) || 0) + (minutes(r.cook_time) || 0)) || null;
+}
+const num = v => (typeof v === "number" ? v : null);
+const round = v => Math.round(v);
+
+/* scale leading amounts like "500 g", "1½ TL", "½ TL", "1,5 EL", "2-3" */
+const FR = { "¼": .25, "½": .5, "¾": .75, "⅓": 1 / 3, "⅔": 2 / 3, "⅛": .125 };
+function parseAmount(s) {
+  const t = s.replace(",", ".");
+  let m = t.match(/^(\d+(?:\.\d+)?)?\s*([¼½¾⅓⅔⅛])/);
+  if (m) return (m[1] ? +m[1] : 0) + FR[m[2]];
+  m = t.match(/^(\d+)\/(\d+)/); if (m) return m[1] / m[2];
+  return +t;
+}
+function fmtAmount(v) {
+  const whole = Math.floor(v + 1e-9), rest = v - whole;
+  const f = Object.entries(FR).find(([, x]) => Math.abs(x - rest) < 0.04);
+  if (rest < 0.04) return String(whole);
+  if (f && whole < 10) return (whole || "") + f[0];
+  return (Math.round(v * 10) / 10).toString().replace(".", ",");
+}
+function scaleText(text, factor) {
+  if (factor === 1) return esc(text);
+  const re = /^(\d+\/\d+|\d+(?:[.,]\d+)?(?:\s*[¼½¾⅓⅔⅛])?|[¼½¾⅓⅔⅛])(\s*[-–]\s*(\d+(?:[.,]\d+)?))?/;
+  const m = text.match(re);
+  if (!m) return esc(text);
+  let out = fmtAmount(parseAmount(m[1].trim()) * factor);
+  if (m[3]) out += "–" + fmtAmount(parseAmount(m[3]) * factor);
+  return `<b>${esc(out)}</b>` + esc(text.slice(m[0].length));
+}
+
+/* amounts inside running text (steps, description): only "number + unit" or
+   "number + an ingredient of this recipe" scale; times, temperatures, sizes,
+   percentages and step numbers stay as they are. */
+const UNIT_RE = "(?:k?g|mg|m?l|cl|dl|EL|TL|Msp\\.?|Messerspitzen?|Prisen?|Pck\\.?|Päckchen|Packung(?:en)?|Becher|Tassen?|Gl(?:as|äser)|Dosen?|Bund|Stück|Stk\\.?|Scheiben?|Zehen?|Knollen?|Kugeln?|Blätter|Blatt|Zweige?|Handvoll|cups?|tbsp|tsp|tablespoons?|teaspoons?|oz|lbs?|pounds?|cloves?|slices?|cans?|pinch(?:es)?|sticks?)";
+const QUAL_RE = "(?:geh\\.|gehäufte?[rn]?|gestr\\.|gestrichene?[rn]?|knappe?[rn]?|gute?[rn]?|heaping|heaped|level|rounded)\\s+";
+const NUM_RE = "(\\d+\\/\\d+|\\d+(?:[.,]\\d+)?(?:\\s*[¼½¾⅓⅔⅛])?|[¼½¾⅓⅔⅛])(\\s*(?:-|–|bis|to)\\s*(\\d+(?:[.,]\\d+)?))?";
+function ingredientStems(r) {
+  if (r._stems) return r._stems;
+  const stems = new Set();
+  for (const i of r.ingredients) {
+    const word = i.text.replace(new RegExp("^\\s*" + NUM_RE + "\\s*(?:" + UNIT_RE + "\\b)?\\.?\\s*", "iu"), "")
+      .match(/[\p{L}]{3,}/u);
+    if (word) stems.add(norm(word[0]).slice(0, 4));
+  }
+  return (r._stems = stems);
+}
+function scaleInline(text, factor, r) {
+  if (factor === 1) return esc(text);
+  const stems = ingredientStems(r);
+  const re = new RegExp("(^|[^\\p{L}\\d.,/])" + NUM_RE + "(\\s*(?:" + QUAL_RE + ")?)(" + UNIT_RE + "(?![\\p{L}])|[\\p{L}]{3,})", "giu");
+  let out = "", last = 0, m;
+  while ((m = re.exec(text))) {
+    const [all, pre, a, range, b, sp, word] = m;
+    const isUnit = new RegExp("^" + UNIT_RE + "$", "iu").test(word);
+    if (!isUnit && !stems.has(norm(word).slice(0, 4))) continue;
+    const start = m.index + pre.length;
+    let amount = fmtAmount(parseAmount(a.trim()) * factor);
+    if (range) amount += range.replace(/\d+(?:[.,]\d+)?$/, "").replace(/\s+/g, " ") + fmtAmount(parseAmount(b) * factor);
+    out += esc(text.slice(last, start)) + `<b>${esc(amount)}</b>`;
+    last = start + a.length + (range || "").length;
+  }
+  return out + esc(text.slice(last));
+}
+
+/* ---------- state + routing ---------------------------------------------- */
+let RECIPES = [];
+const app = document.getElementById("app");
+const F = { q: "", cat: "", kw: "", maxKcal: "", minProt: "", sort: "new" };
+let VIEW = store.get("rv:view") === "index" ? "index" : "cards";
+try { Object.assign(F, JSON.parse(sessionStorage.getItem("rv:filters") || "{}")); } catch {}
+
+function route() {
+  releaseWake();
+  const [, view, slug] = location.hash.match(/^#\/(r|cook|edit)\/(.+)$/) || [];
+  const r = slug && RECIPES.find(x => x.slug === decodeURIComponent(slug));
+  if (view === "r" && r) return renderDetail(r);
+  if (view === "cook" && r) return renderCook(r);
+  if (view === "edit" && r) return renderEdit(r);
+  renderList();
+}
+addEventListener("hashchange", () => { route(); scrollTo(0, 0); });
+
+/* ---------- list view ----------------------------------------------------- */
+function renderList() {
+  document.title = "Rezepte";
+  const cats = [...new Set(RECIPES.map(r => r.category).filter(Boolean))].sort();
+  const kws = [...new Set(RECIPES.flatMap(r => r.keywords))].sort((a, b) => a.localeCompare(b, "de"));
+  const opt = (v, label, cur) => `<option value="${esc(v)}"${v === cur ? " selected" : ""}>${esc(label)}</option>`;
+  app.className = "wrap";
+  app.innerHTML = `
+    <div class="top"><h1>Rezepte<span class="ver">v${APP_VERSION}</span></h1><div class="top-right"><span class="count" id="count"></span>
+      <button class="add-btn" id="addBtn" type="button">+ Rezept</button>
+      <div class="view" role="group" aria-label="Ansicht">
+        <button data-v="cards"${VIEW === "cards" ? ' class="on"' : ""}>Karten</button><button data-v="index"${VIEW === "index" ? ' class="on"' : ""}>Index</button>
+      </div></div></div>
+    <div class="search-wrap">
+      <input class="search" id="q" type="search" placeholder="Suchen: Titel, Zutat, Schlagwort …" value="${esc(F.q)}" autocomplete="off">
+      <button class="search-clear" id="qClear" type="button" aria-label="Suche löschen"${F.q ? "" : " hidden"}>×</button>
+    </div>
+    <div class="filters">
+      <select id="cat" aria-label="Kategorie">${opt("", "Alle Kategorien", F.cat)}${cats.map(c => opt(c, c, F.cat)).join("")}</select>
+      <select id="kw" aria-label="Schlagwort">${opt("", "Alle Schlagwörter", F.kw)}${kws.map(k => opt(k, k, F.kw)).join("")}</select>
+      <input id="maxKcal" type="number" inputmode="numeric" min="0" placeholder="max. kcal" value="${esc(F.maxKcal)}" aria-label="Maximal kcal pro Portion">
+      <input id="minProt" type="number" inputmode="numeric" min="0" placeholder="min. Eiweiß g" value="${esc(F.minProt)}" aria-label="Mindestens Eiweiß in Gramm">
+      <select id="sort" aria-label="Sortierung"${VIEW === "index" ? " hidden" : ""}>
+        ${opt("new", "Neueste zuerst", F.sort)}${opt("az", "A–Z", F.sort)}
+        ${opt("prot", "Meiste Eiweiß", F.sort)}${opt("time", "Schnellste", F.sort)}
+      </select>
+      <button class="reset" id="reset">Zurücksetzen</button>
+    </div>
+    <div class="${VIEW === "index" ? "index" : "grid"}" id="grid"></div>`;
+  for (const id of ["q", "cat", "kw", "maxKcal", "minProt", "sort"])
+    document.getElementById(id).addEventListener("input", e => { F[id] = e.target.value; drawGrid(); });
+  const q = document.getElementById("q"), qClear = document.getElementById("qClear");
+  const clearSearch = () => { q.value = ""; F.q = ""; qClear.hidden = true; drawGrid(); q.focus(); };
+  q.addEventListener("input", () => { qClear.hidden = !q.value; });
+  q.addEventListener("keydown", e => { if (e.key === "Escape" && q.value) { e.preventDefault(); clearSearch(); } });
+  qClear.onclick = clearSearch;
+  document.getElementById("addBtn").onclick = openAdd;
+  document.querySelector(".view").onclick = e => {
+    if (!e.target.dataset.v || e.target.dataset.v === VIEW) return;
+    VIEW = e.target.dataset.v; store.set("rv:view", VIEW); renderList();
+  };
+  document.getElementById("reset").onclick = () => {
+    Object.assign(F, { q: "", cat: "", kw: "", maxKcal: "", minProt: "", sort: "new" }); renderList();
+  };
+  drawGrid();
+}
+
+function matches(r) {
+  if (F.cat && r.category !== F.cat) return false;
+  if (F.kw && !r.keywords.includes(F.kw)) return false;
+  const kcal = num(r.nutrition.calories), prot = num(r.nutrition.protein_g);
+  if (F.maxKcal !== "" && !(kcal != null && kcal <= +F.maxKcal)) return false;
+  if (F.minProt !== "" && !(prot != null && prot >= +F.minProt)) return false;
+  if (F.q.trim()) {
+    const hay = norm([r.title, r.description, r.author, r.category, r.cuisine, r.source_site,
+      ...r.keywords, ...r.ingredients.map(i => i.text)].join(" "));
+    return norm(F.q).split(/\s+/).filter(Boolean).every(w => hay.includes(w));
+  }
+  return true;
+}
+
+function drawGrid() {
+  try { sessionStorage.setItem("rv:filters", JSON.stringify(F)); } catch {}
+  let list = RECIPES.filter(matches);
+  const by = {
+    az: (a, b) => a.title.localeCompare(b.title, "de"),
+    prot: (a, b) => (num(b.nutrition.protein_g) ?? -1) - (num(a.nutrition.protein_g) ?? -1),
+    time: (a, b) => (totalMin(a) ?? 1e9) - (totalMin(b) ?? 1e9),
+  }[F.sort];
+  if (by) list = [...list].sort(by);
+  document.getElementById("count").textContent =
+    list.length === RECIPES.length ? `${RECIPES.length} Rezepte` : `${list.length} von ${RECIPES.length}`;
+  const grid = document.getElementById("grid");
+  if (!list.length) { grid.innerHTML = `<p class="empty">Nichts gefunden.</p>`; return; }
+  if (VIEW === "index") { grid.innerHTML = indexHTML(list); return; }
+  grid.innerHTML = list.map(r => {
+    const n = r.nutrition, t = fmtMin(totalMin(r));
+    const meta = [
+      t && `⏱ ${t}`,
+      num(n.calories) != null && `${round(n.calories)} kcal`,
+      num(n.protein_g) != null && `${round(n.protein_g)} g Eiweiß`,
+      r.servings && `${r.servings} Port.`,
+    ].filter(Boolean);
+    const chips = [r.category, ...r.keywords].filter(Boolean).slice(0, 4);
+    return `<a class="card" href="#/r/${encodeURIComponent(r.slug)}">
+      <div class="thumb">${imgSrc(r)
+        ? `<img src="${esc(imgSrc(r))}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-l="${esc(r.title.trim()[0] || "?")}" onerror="this.parentNode.textContent=this.dataset.l">`
+        : esc(r.title.trim()[0] || "?")}</div>
+      <div class="card-body">
+        <h2>${esc(r.title)}</h2>
+        <div class="meta">${meta.map(m => `<span>${esc(m)}</span>`).join("")}</div>
+        <div class="chips">${chips.map(c => `<span class="chip">${esc(c)}</span>`).join("")}</div>
+      </div></a>`;
+  }).join("");
+}
+
+/* photo: own copy in images/ (via proxy, cached forever), else an external image_url */
+const imgSrc = r => r.image ? "/gitea/media/" + String(r.image).split("/").map(encodeURIComponent).join("/") : r.image_url || "";
+
+/* credit line for photos that aren't from the recipe's own source file */
+function photoCredit(r) {
+  const s = String(r.image_source || "");
+  if (s.startsWith("Wikimedia Commons:")) {
+    const [, author, license, url] = s.slice(18).split(" · ").map(x => x.trim());
+    return `Foto: ${esc(author)} · ${esc(license)} · <a href="${esc(url)}" target="_blank" rel="noopener noreferrer">Wikimedia Commons</a>`;
+  }
+  if (s.startsWith("KI-generiert")) return "KI-generiertes Bild";
+  if (/^https?:\/\//.test(s)) {
+    let host = s; try { host = new URL(s).hostname.replace(/^www\./, ""); } catch {}
+    return `Foto: <a href="${esc(s)}" target="_blank" rel="noopener noreferrer">${esc(host)}</a>`;
+  }
+  return "";
+}
+
+/* title-only A–Z list, grouped by first letter (Ä -> A, digits -> #) */
+function indexHTML(list) {
+  const letter = r => { const c = norm(r.title.trim()).replace(/^[^\p{L}\d]+/u, "")[0] || "#";
+    return /\d/.test(c) ? "#" : c.toUpperCase(); };
+  const groups = new Map();
+  for (const r of [...list].sort((a, b) => a.title.localeCompare(b.title, "de"))) {
+    const l = letter(r);
+    if (!groups.has(l)) groups.set(l, []);
+    groups.get(l).push(r);
+  }
+  return [...groups].map(([l, rs]) => `<section><h2>${esc(l)}</h2><ul>${rs.map(r =>
+    `<li><a href="#/r/${encodeURIComponent(r.slug)}">${esc(r.title)}</a></li>`).join("")}</ul></section>`).join("");
+}
+
+/* servings chosen per recipe, shared by detail and cook view (per browser tab).
+   Recipes without a servings count scale by a factor (½×, 1×, 1½× …) instead. */
+const SERV = (() => { try { return JSON.parse(sessionStorage.getItem("rv:serv")) || {}; } catch { return {}; } })();
+const FACTORS = [0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6, 8];
+function portions(r) {
+  const base = num(r.servings);
+  let v = SERV[r.slug] ?? (base || 1);
+  return {
+    base,
+    factor: () => (base ? v / base : v),
+    label: () => (base ? `${fmtAmount(v)} Port.` : `${fmtAmount(v)}× Menge`),
+    canLess: () => (base ? v > 1 : v > FACTORS[0]),
+    step(d) {
+      if (base) v = Math.max(1, v + d);
+      else { const i = FACTORS.indexOf(v); v = FACTORS[Math.min(FACTORS.length - 1, Math.max(0, (i < 0 ? 1 : i) + d))]; }
+      if (v === (base || 1)) delete SERV[r.slug]; else SERV[r.slug] = v;
+      try { sessionStorage.setItem("rv:serv", JSON.stringify(SERV)); } catch {}
+    },
+  };
+}
+
+function scalerHTML(id) {
+  return `<div class="scaler"><button id="${id}Minus" type="button" aria-label="Weniger">−</button>
+    <b id="${id}Val"></b><button id="${id}Plus" type="button" aria-label="Mehr">+</button></div>`;
+}
+
+/* ---------- detail view --------------------------------------------------- */
+function groupIngredients(r, fn) {
+  let html = "", g;
+  for (const i of r.ingredients) {
+    if (i.group !== g) { g = i.group; if (g) html += fn.header(g); }
+    html += fn.item(i);
+  }
+  return html;
+}
+
+function renderDetail(r) {
+  document.title = r.title;
+  const n = r.nutrition;
+  const facts = [
+    ["Portionen", r.servings],
+    ["Vorbereitung", fmtMin(minutes(r.prep_time))],
+    ["Kochen/Backen", fmtMin(minutes(r.cook_time))],
+    ["Gesamt", fmtMin(minutes(r.total_time))],
+    [`kcal${n.serving_size ? " / " + n.serving_size : ""}`, num(n.calories) != null && round(n.calories)],
+    ["Eiweiß", num(n.protein_g) != null && round(n.protein_g) + " g"],
+    ["Kohlenhydrate", num(n.carbs_g) != null && round(n.carbs_g) + " g"],
+    ["Fett", num(n.fat_g) != null && round(n.fat_g) + " g"],
+  ].filter(([, v]) => v);
+  app.className = "wrap detail";
+  app.innerHTML = `
+    <a class="back" href="#/">← Alle Rezepte</a>
+    ${imgSrc(r) ? `<div class="hero"><img src="${esc(imgSrc(r))}" alt="" referrerpolicy="no-referrer" onerror="this.parentNode.remove()"></div>` : ""}
+    ${imgSrc(r) && photoCredit(r) ? `<p class="credit">${photoCredit(r)}</p>` : ""}
+    <h1>${esc(r.title)}</h1>
+    ${r.description ? `<p class="lead" id="dLead"></p>` : ""}
+    <div class="facts">${facts.map(([k, v]) => `<div class="fact"><b>${esc(v)}</b>${esc(k)}</div>`).join("")}</div>
+    <div class="actions">
+      ${r.steps.length ? `<a class="btn" href="#/cook/${encodeURIComponent(r.slug)}">Kochansicht starten</a>` : ""}
+      <a class="btn ghost" href="#/edit/${encodeURIComponent(r.slug)}">Bearbeiten</a>
+      <span class="src">${[r.author && esc(r.author),
+        r.source_url && `<a href="${esc(r.source_url)}" target="_blank" rel="noopener noreferrer">${esc(r.source_site || "Quelle")}</a>`]
+        .filter(Boolean).join(" · ")}</span>
+    </div>
+    <div class="cols">
+      <section><div class="ing-head"><h2>Zutaten</h2>${r.ingredients.length ? scalerHTML("d") : ""}</div>
+        <p class="orig" id="dOrig" hidden></p><div id="dIng"></div></section>
+      <section><h2>Zubereitung</h2><ol class="steps" id="dSteps"></ol></section>
+    </div>`;
+  const p = portions(r), $ = id => document.getElementById(id);
+  const draw = () => {
+    const f = p.factor();
+    $("dIng").innerHTML = `<ul class="ing">${groupIngredients(r, {
+      header: g => `</ul><h3>${esc(g)}</h3><ul class="ing">`,
+      item: i => `<li>${scaleText(i.text, f)}</li>`,
+    })}</ul>`;
+    $("dSteps").innerHTML = r.steps.map(s => `<li>${scaleInline(s, f, r)}</li>`).join("");
+    if ($("dLead")) $("dLead").innerHTML = scaleInline(r.description, f, r);
+    if (!$("dVal")) return;
+    $("dVal").textContent = p.label();
+    $("dMinus").disabled = !p.canLess();
+    $("dOrig").hidden = f === 1;
+    $("dOrig").textContent = p.base ? `Mengen umgerechnet · Original: ${fmtAmount(p.base)} Port.` : "Mengen umgerechnet";
+  };
+  if ($("dMinus")) {
+    $("dMinus").onclick = () => { p.step(-1); draw(); };
+    $("dPlus").onclick = () => { p.step(1); draw(); };
+  }
+  draw();
+}
+
+/* ---------- cook view ----------------------------------------------------- */
+let wake = null;
+async function holdWake() {
+  try { wake = await navigator.wakeLock?.request("screen"); } catch {}
+}
+function releaseWake() { try { wake?.release(); } catch {} wake = null; }
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && location.hash.startsWith("#/cook/")) holdWake();
+});
+
+function renderCook(r) {
+  document.title = "Kochen: " + r.title;
+  const p = portions(r);
+  let step = 0;
+  const checked = new Set();
+  holdWake();
+  app.className = "cook";
+  app.innerHTML = `<div class="wrap">
+    <div class="cook-top">
+      <a class="back" href="#/r/${encodeURIComponent(r.slug)}">✕ Beenden</a>
+      ${scalerHTML("c")}
+    </div>
+    <h1 class="cook-title">${esc(r.title)}</h1>
+    <ul class="cook-ing" id="ing"></ul>
+    <div class="stepbox"><div class="stepno" id="no"></div><p class="steptext" id="txt"></p></div>
+    <div class="nav"><button class="btn ghost" id="prev">← Zurück</button><button class="btn" id="next">Weiter →</button></div>
+    <div class="dots" id="dots"></div>
+    <p class="hint">Tipp: Pfeiltasten ← → zum Blättern. Der Bildschirm bleibt an.</p>
+  </div>`;
+  const $ = id => document.getElementById(id);
+
+  function drawIng() {
+    $("cVal").textContent = p.label();
+    $("cMinus").disabled = !p.canLess();
+    const f = p.factor();
+    let idx = 0;
+    $("ing").innerHTML = groupIngredients(r, {
+      header: g => `<li><h3>${esc(g)}</h3></li>`,
+      item: i => { const k = idx++; return `<li><label><input type="checkbox" data-k="${k}"${checked.has(k) ? " checked" : ""}>
+        <span>${scaleText(i.text, f)}</span></label></li>`; },
+    });
+  }
+  function drawStep() {
+    const n = r.steps.length;
+    $("no").textContent = `Schritt ${step + 1} von ${n}`;
+    $("txt").innerHTML = scaleInline(r.steps[step] || "", p.factor(), r);
+    $("prev").disabled = step === 0;
+    $("next").textContent = step === n - 1 ? "Fertig ✓" : "Weiter →";
+    $("dots").innerHTML = r.steps.map((_, i) =>
+      `<button class="${i === step ? "on" : ""}" data-i="${i}" aria-label="Schritt ${i + 1}"></button>`).join("");
+  }
+  const go = d => {
+    if (step + d >= r.steps.length) { location.hash = `#/r/${encodeURIComponent(r.slug)}`; return; }
+    step = Math.max(0, step + d); drawStep();
+  };
+  $("ing").addEventListener("change", e => {
+    const k = +e.target.dataset.k; e.target.checked ? checked.add(k) : checked.delete(k);
+  });
+  $("cMinus").onclick = () => { p.step(-1); drawIng(); drawStep(); };
+  $("cPlus").onclick = () => { p.step(1); drawIng(); drawStep(); };
+  $("prev").onclick = () => go(-1);
+  $("next").onclick = () => go(1);
+  $("dots").onclick = e => { if (e.target.dataset.i) { step = +e.target.dataset.i; drawStep(); } };
+  onkeydown = e => {
+    if (!location.hash.startsWith("#/cook/")) return;
+    if (e.key === "ArrowRight") go(1);
+    if (e.key === "ArrowLeft") go(-1);
+    if (e.key === "Escape") location.hash = `#/r/${encodeURIComponent(r.slug)}`;
+  };
+  drawIng(); drawStep();
+}
+
+/* ---------- add recipe (file, link or pasted text) ------------------------
+   POST /api/import/file (raw body, X-Filename) or /api/import/url {url};
+   pasted text goes to /api/import/file as a .txt file.
+   -> job; poll /api/import/jobs/<id> until done/skipped/failed.
+   The importer runs the same pipeline as for OneDrive files and pushes to Gitea. */
+const ADD_TYPES = ".pdf,.jpg,.jpeg,.png,.gif,.webp,.heic,.heif,.docx,.xlsx,.txt,.md";
+let addMode = "file", addFile = null, addBusy = false;
+
+function openAdd() {
+  let dlg = document.getElementById("add");
+  if (!dlg) {
+    document.body.insertAdjacentHTML("beforeend", `
+      <dialog class="add" id="add"><form method="dialog" id="addForm">
+        <h2>Rezept hinzufügen</h2>
+        <div class="tabs" role="tablist">
+          <button type="button" data-m="file" class="on">Datei</button><button type="button" data-m="url">Link</button><button type="button" data-m="text">Text</button>
+        </div>
+        <div id="addFile">
+          <div class="drop" id="drop" tabindex="0" role="button" aria-label="Datei auswählen">
+            <b id="dropName">Datei hierher ziehen oder tippen zum Auswählen</b>
+            PDF, Foto, Word, Excel oder Text · max. 30 MB
+          </div>
+          <input type="file" id="fileIn" accept="${ADD_TYPES}" hidden>
+        </div>
+        <div id="addUrl" hidden>
+          <input type="url" id="urlIn" placeholder="https://… Rezeptseite, YouTube oder TikTok" autocomplete="off" inputmode="url">
+        </div>
+        <div id="addText" hidden>
+          <textarea id="textIn" placeholder="Rezept hier einfügen: Titel, Zutaten, Zubereitung …" spellcheck="false"></textarea>
+        </div>
+        <p class="note">Wird wie eine Datei im OneDrive-Ordner verarbeitet: Rezept erkennen, Foto suchen, speichern. Dauert meist 20–60 Sekunden.</p>
+        <div class="row">
+          <span class="status" id="addStatus" aria-live="polite"></span>
+          <button type="button" class="btn ghost" id="addClose">Schließen</button>
+          <button type="submit" class="btn" id="addGo">Hinzufügen</button>
+        </div>
+      </form></dialog>`);
+    dlg = document.getElementById("add");
+    const $ = id => document.getElementById(id);
+    dlg.querySelector(".tabs").onclick = e => { if (e.target.dataset.m && !addBusy) setAddMode(e.target.dataset.m); };
+    $("drop").onclick = () => $("fileIn").click();
+    $("drop").onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("fileIn").click(); } };
+    $("fileIn").onchange = e => pickFile(e.target.files[0]);
+    for (const ev of ["dragenter", "dragover"]) $("drop").addEventListener(ev, e => { e.preventDefault(); $("drop").classList.add("over"); });
+    for (const ev of ["dragleave", "drop"]) $("drop").addEventListener(ev, e => { e.preventDefault(); $("drop").classList.remove("over"); });
+    $("drop").addEventListener("drop", e => pickFile(e.dataTransfer.files[0]));
+    $("addClose").onclick = () => dlg.close();
+    $("addForm").onsubmit = e => { e.preventDefault(); submitAdd(); };
+  }
+  if (!addBusy) {
+    addFile = null; setAddMode("file"); setAddStatus("");
+    document.getElementById("dropName").textContent = "Datei hierher ziehen oder tippen zum Auswählen";
+    document.getElementById("urlIn").value = ""; document.getElementById("fileIn").value = "";
+    document.getElementById("textIn").value = "";
+  }
+  dlg.showModal();
+}
+
+function setAddMode(m) {
+  addMode = m;
+  document.querySelectorAll("#add .tabs button").forEach(b => b.classList.toggle("on", b.dataset.m === m));
+  document.getElementById("addFile").hidden = m !== "file";
+  document.getElementById("addUrl").hidden = m !== "url";
+  document.getElementById("addText").hidden = m !== "text";
+  if (m === "url") document.getElementById("urlIn").focus();
+  if (m === "text") document.getElementById("textIn").focus();
+}
+
+function pickFile(f) {
+  if (!f) return;
+  addFile = f;
+  document.getElementById("dropName").textContent = `${f.name} (${(f.size / 1048576).toFixed(1)} MB)`;
+  setAddStatus("");
+}
+
+function setAddStatus(html, err = false) {
+  const el = document.getElementById("addStatus");
+  el.innerHTML = html; el.classList.toggle("err", err);
+}
+
+/* POST -> job; poll until done/skipped/failed. onStep gets the progress text. */
+async function runJob(request, onStep) {
+  const r = await request;
+  let job = await r.json().catch(() => ({ message: `HTTP ${r.status}` }));
+  if (!r.ok) throw new Error(job.message || `HTTP ${r.status}`);
+  while (job.id && !["done", "skipped", "failed"].includes(job.status)) {
+    onStep(job.step || "Wird verarbeitet …");
+    await new Promise(res => setTimeout(res, 2000));
+    const pr = await fetch(`/api/import/jobs/${job.id}`);
+    if (!pr.ok) throw new Error(`Status nicht abrufbar (HTTP ${pr.status})`);
+    job = await pr.json();
+  }
+  return job;
+}
+
+async function submitAdd() {
+  if (addBusy) return;
+  let req;
+  if (addMode === "file") {
+    if (!addFile) return setAddStatus("Bitte zuerst eine Datei auswählen.", true);
+    if (addFile.size > 30 * 1048576) return setAddStatus("Datei ist größer als 30 MB.", true);
+    req = fetch("/api/import/file", { method: "POST", body: addFile,
+      headers: { "X-Filename": encodeURIComponent(addFile.name), "Content-Type": "application/octet-stream" } });
+  } else if (addMode === "text") {
+    const text = document.getElementById("textIn").value.trim();
+    if (/^https?:\/\/\S+$/.test(text)) {   // just a link: use the link import instead
+      setAddMode("url"); document.getElementById("urlIn").value = text;
+      return setAddStatus("Link erkannt – nochmal auf „Hinzufügen“ tippen.");
+    }
+    if (text.length < 40) return setAddStatus("Bitte den Rezepttext einfügen (Zutaten und Zubereitung).", true);
+    const blob = new Blob([text + "\n"], { type: "text/plain" });
+    if (blob.size > 30 * 1048576) return setAddStatus("Text ist größer als 30 MB.", true);
+    // file name from the first line, so the import note and Quelle say what it was
+    const first = text.split("\n")[0].replace(/[\\/:*?"<>|#]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 60);
+    const name = `${first || "Eingefügter Text"}.txt`;
+    req = fetch("/api/import/file", { method: "POST", body: blob,
+      headers: { "X-Filename": encodeURIComponent(name), "Content-Type": "application/octet-stream" } });
+  } else {
+    const url = document.getElementById("urlIn").value.trim();
+    if (!/^https?:\/\/\S+\.\S+/.test(url)) return setAddStatus("Bitte einen vollständigen Link (https://…) eingeben.", true);
+    req = fetch("/api/import/url", { method: "POST", body: JSON.stringify({ url }), headers: { "Content-Type": "application/json" } });
+  }
+  addBusy = true; document.getElementById("addGo").disabled = true;
+  setAddStatus(`<span class="spin"></span>Wird hochgeladen …`);
+  try {
+    const job = await runJob(req, step => setAddStatus(`<span class="spin"></span>${esc(step)}`));
+    await finishAdd(job);
+  } catch (e) {
+    setAddStatus(`Fehler: ${esc(e.message)}`, true);
+  } finally {
+    addBusy = false; document.getElementById("addGo").disabled = false;
+  }
+}
+
+async function finishAdd(job) {
+  const links = (job.recipes || []).map(r => `<a href="#/r/${encodeURIComponent(r.slug)}">${esc(r.title)}</a>`).join("<br>");
+  let title, body;
+  if (job.status === "done") {
+    setAddStatus(`<span class="spin"></span>Gespeichert – Liste wird aktualisiert …`);
+    try { await reloadRecipes(); } catch {}
+    title = "✓ Rezept hinzugefügt";
+    body = `<p class="res-links">${links}</p>`;
+  } else if (job.status === "skipped") {
+    title = "Nicht hinzugefügt";
+    body = `<p>${esc(job.message)}</p>${links ? `<p class="res-links">${links}</p>` : ""}`;
+  } else {
+    title = "Fehlgeschlagen";
+    body = `<p>${esc(job.message)}</p>`;
+  }
+  addFile = null;
+  if (job.status === "done") document.getElementById("textIn").value = "";
+  document.getElementById("add")?.close();
+  showAddResult(title, body, job.status);
+}
+
+/* result in its own dialog: the input dialog is closed; "+ Rezept" starts fresh */
+function showAddResult(title, body, status) {
+  let dlg = document.getElementById("addResult");
+  if (!dlg) {
+    document.body.insertAdjacentHTML("beforeend", `<dialog class="add" id="addResult"><form method="dialog">
+      <h2 id="resTitle"></h2><div id="resBody" class="res-body"></div>
+      <div class="row"><button class="btn" id="resClose" autofocus>Schließen</button></div></form></dialog>`);
+    dlg = document.getElementById("addResult");
+    dlg.querySelector("#resBody").addEventListener("click", e => { if (e.target.closest("a")) dlg.close(); });
+  }
+  dlg.querySelector("#resTitle").textContent = title;
+  dlg.querySelector("#resTitle").className = status === "done" ? "ok" : "err";
+  dlg.querySelector("#resBody").innerHTML = body;
+  dlg.showModal();
+}
+
+async function reloadRecipes() {
+  const files = await fetchFiles();
+  store.set(CACHE_KEY, JSON.stringify(files));
+  RECIPES = toRecipes(files);
+  if (!/^#\/(cook|edit)\//.test(location.hash)) route();
+}
+
+/* ---------- edit recipe ----------------------------------------------------
+   Text: edit the Markdown directly, or let Claude apply an instruction
+   (POST /api/import/edit/ai -> proposal in the text field, nothing saved yet).
+   Save: /api/import/edit/save {path, base, markdown}; base = the file as loaded,
+   so a change made elsewhere in the meantime is refused instead of overwritten.
+   Photo: own upload (/image/upload, saved at once), or a suggestion from the
+   source page / Wikimedia Commons (/image/find) or Gemini (/image/generate)
+   that is only saved with "Übernehmen" (/image/accept). */
+function setFront(md, key, line) {
+  const m = md.match(/^---\n([\s\S]*?)\n---\n/);
+  if (!m) return md;
+  const re = new RegExp(`^${key}:.*$`, "m");
+  let front = m[1];
+  front = re.test(front) ? front.replace(re, line ?? "").replace(/\n{2,}/g, "\n").replace(/\n$/, "")
+    : line ? `${front}\n${line}` : front;
+  return `---\n${front}\n---\n` + md.slice(m[0].length);
+}
+const frontLine = (md, key) => ((md.match(/^---\n([\s\S]*?)\n---\n/) || [, ""])[1].match(new RegExp(`^${key}:.*$`, "m")) || [null])[0];
+
+function renderEdit(r) {
+  document.title = "Bearbeiten: " + r.title;
+  const back = `#/r/${encodeURIComponent(r.slug)}`;
+  let base = r.md, busy = false, undoText = null, cand = null, shown = [];
+  app.className = "wrap edit";
+  app.innerHTML = `
+    <a class="back" href="${back}" id="eBack">← Zurück zum Rezept</a>
+    <h1>Rezept bearbeiten</h1>
+    <p class="lead">${esc(r.title)}</p>
+    <section class="ebox">
+      <h2>Foto</h2>
+      <div class="ephoto">
+        <figure><div id="eCur"></div><figcaption id="eCurSrc"></figcaption></figure>
+        <figure class="ecand" id="eCand" hidden><img id="eCandImg" alt="Vorschlag">
+          <figcaption><b>Vorschlag</b> · <span id="eCandSrc"></span></figcaption></figure>
+      </div>
+      <div class="row" id="eCandRow" hidden>
+        <button type="button" class="btn" id="eAccept">Übernehmen</button>
+        <button type="button" class="btn ghost" id="eAgain">Anderer Vorschlag</button>
+        <button type="button" class="btn ghost" id="eDrop">Verwerfen</button>
+      </div>
+      <div class="row">
+        <button type="button" class="btn ghost" id="eUpload">Eigenes Foto …</button>
+        <button type="button" class="btn ghost" id="eFind">Foto suchen</button>
+        <button type="button" class="btn ghost" id="eGen" hidden>KI-Bild generieren</button>
+        <input type="file" id="eFile" accept="image/*,.heic,.heif" hidden>
+      </div>
+      <div class="row" id="eHintRow" hidden>
+        <input type="text" id="eHint" maxlength="300" placeholder="Wunsch fürs KI-Bild (optional), z. B. „in der Auflaufform, von oben“">
+      </div>
+    </section>
+    <section class="ebox">
+      <h2>Text</h2>
+      <div class="row">
+        <input type="text" id="eInstr" maxlength="2000" placeholder="Was soll die KI ändern? z. B. „2 Knoblauchzehen ergänzen“">
+        <button type="button" class="btn ghost" id="eAi">KI anwenden</button>
+      </div>
+      <p class="note" id="eAiNote" hidden></p>
+      <textarea id="eText" spellcheck="false" aria-label="Rezepttext (Markdown)"></textarea>
+      <p class="note">Markdown. Die Überschriften „## Zutaten“ und „## Zubereitung“ bitte so lassen, die App erkennt die Abschnitte daran.</p>
+    </section>
+    <div class="ebar">
+      <span class="status" id="eStatus" aria-live="polite"></span>
+      <button type="button" class="btn ghost" id="eCancel">Abbrechen</button>
+      <button type="button" class="btn" id="eSave">Speichern</button>
+    </div>`;
+  const $ = id => document.getElementById(id), text = $("eText");
+  text.value = base;
+  const dirty = () => text.value.trim() !== base.trim();
+  const status = (html, err = false) => { $("eStatus").innerHTML = html; $("eStatus").classList.toggle("err", err); };
+  const spin = step => status(`<span class="spin"></span>${esc(step)}`);
+  const drawCur = () => {
+    const meta = parseFrontmatter((base.match(/^---\n([\s\S]*?)\n---\n/) || [, ""])[1]);
+    const src = imgSrc(meta);
+    $("eCur").innerHTML = src ? `<img src="${esc(src)}" alt="Aktuelles Foto" referrerpolicy="no-referrer">` : `<div class="none">Noch kein Foto</div>`;
+    $("eCurSrc").innerHTML = src ? "Aktuelles Foto" + (photoCredit(meta) ? " · " + photoCredit(meta) : "") : "";
+  };
+  const showCand = c => {
+    cand = c;
+    $("eCand").hidden = $("eCandRow").hidden = !c;
+    if (!c) return;
+    shown.push(c.source);
+    $("eCandImg").src = `/api/import/candidates/${c.candidate}.webp`;
+    $("eCandSrc").innerHTML = photoCredit({ image_source: c.source }) || esc(c.source);
+  };
+  const setBusy = b => {
+    busy = b;
+    app.querySelectorAll(".ebox button, .ebar #eSave").forEach(x => { x.disabled = b; });
+  };
+  const job = async (action, body, headers) => {
+    const req = fetch(`/api/import/${action}`, { method: "POST",
+      body: headers ? body : JSON.stringify({ path: r.path, ...body }),
+      headers: headers || { "Content-Type": "application/json" } });
+    const j = await runJob(req, spin);
+    if (j.status !== "done") throw new Error(j.message || "Fehlgeschlagen");
+    return j;
+  };
+  const act = fn => async () => {
+    if (busy) return;
+    setBusy(true);
+    try { await fn(); } catch (e) { status(esc(e.message), true); } finally { setBusy(false); }
+  };
+  // a photo commit changed the file: adopt it as the new base, keep text edits
+  const photoSaved = md => {
+    const edited = dirty();
+    base = md;
+    text.value = edited ? setFront(setFront(text.value, "image", frontLine(md, "image")),
+                                   "image_source", frontLine(md, "image_source")) : md;
+    drawCur(); showCand(null); reloadRecipes().catch(() => {});
+    status("✓ Foto gespeichert");
+  };
+
+  drawCur();
+  fetch("/api/import/health").then(x => x.json()).then(h => { $("eGen").hidden = $("eHintRow").hidden = !h.generate; }).catch(() => {});
+
+  $("eUpload").onclick = () => $("eFile").click();
+  $("eFile").onchange = act(async () => {
+    const f = $("eFile").files[0]; $("eFile").value = "";
+    if (!f) return;
+    if (f.size > 30 * 1048576) throw new Error("Foto ist größer als 30 MB.");
+    spin("Foto wird hochgeladen …");
+    const j = await job("image/upload", f, { "X-Recipe": encodeURIComponent(r.path),
+      "X-Filename": encodeURIComponent(f.name || "foto.jpg"), "Content-Type": "application/octet-stream" });
+    photoSaved(j.markdown);
+  });
+  const find = act(async () => {
+    spin("Foto wird gesucht …");
+    showCand(await job("image/find", { markdown: text.value, exclude: shown }));
+    status("Vorschlag prüfen und übernehmen – oder anderen holen.");
+  });
+  const gen = act(async () => {
+    spin("KI erzeugt das Foto …");
+    showCand(await job("image/generate", { markdown: text.value, hint: $("eHint").value }));
+    status("Vorschlag prüfen und übernehmen – oder neu generieren.");
+  });
+  let lastFind = find;
+  $("eFind").onclick = () => { lastFind = find; find(); };
+  $("eGen").onclick = () => { lastFind = gen; gen(); };
+  $("eAgain").onclick = () => lastFind();
+  $("eDrop").onclick = () => { showCand(null); status(""); };
+  $("eAccept").onclick = act(async () => {
+    spin("Foto wird gespeichert …");
+    photoSaved((await job("image/accept", { candidate: cand.candidate })).markdown);
+  });
+
+  const ai = act(async () => {
+    const instruction = $("eInstr").value.trim();
+    if (!instruction) throw new Error("Bitte beschreiben, was die KI ändern soll.");
+    spin("Claude überarbeitet das Rezept …");
+    const j = await job("edit/ai", { markdown: text.value, instruction });
+    undoText = text.value; text.value = j.markdown; $("eInstr").value = "";
+    $("eAiNote").hidden = false;
+    $("eAiNote").innerHTML = `KI: ${esc(j.message)} · noch nicht gespeichert · <button type="button" class="linkbtn" id="eUndo">Rückgängig</button>`;
+    $("eUndo").onclick = () => { text.value = undoText; $("eAiNote").hidden = true; };
+    status("Änderung prüfen, dann speichern.");
+  });
+  $("eAi").onclick = ai;
+  $("eInstr").onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); ai(); } };
+
+  $("eSave").onclick = act(async () => {
+    if (!dirty()) { location.hash = back; return; }
+    spin("Wird gespeichert …");
+    await job("edit/save", { base, markdown: text.value });
+    base = text.value;
+    spin("Gespeichert – Liste wird aktualisiert …");
+    try { await reloadRecipes(); } catch {}
+    location.hash = back;
+  });
+  const leave = e => {
+    if (dirty() && !confirm("Ungespeicherte Änderungen verwerfen?")) { e?.preventDefault(); return; }
+    location.hash = back;
+  };
+  $("eCancel").onclick = () => leave();
+  $("eBack").onclick = e => { e.preventDefault(); leave(e); };
+}
+
+/* ---------- start --------------------------------------------------------- */
+let cached = null;
+try { cached = JSON.parse(store.get(CACHE_KEY)); } catch {}
+if (cached) { RECIPES = toRecipes(cached); route(); }
+
+fetchFiles()
+  .then(files => {
+    const json = JSON.stringify(files);
+    store.set(CACHE_KEY, json);
+    if (cached && json === JSON.stringify(cached)) return;   // nothing changed
+    RECIPES = toRecipes(files);
+    if (!cached) return route();
+    // refresh in place without disturbing cook mode or someone typing a search
+    if (/^#\/(cook|edit)\//.test(location.hash)) return;
+    if (document.getElementById("grid") && document.activeElement?.id === "q") drawGrid();
+    else route();
+  })
+  .catch(err => {
+    if (cached) return console.warn("refresh failed, showing cached recipes:", err);
+    app.innerHTML = `<p class="msg">Rezepte konnten nicht geladen werden.<br><small>${esc(err.message)}</small></p>`;
+  });
+</script>
+</body>
+</html>

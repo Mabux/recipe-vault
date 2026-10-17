@@ -1,0 +1,27 @@
+# Local configuration with secrets (Gitea token, paths)
+.env
+*.env
+!*.env.example
+
+# Importer secrets, runtime data and inbox when running locally
+secrets/
+data/
+inbox/
+
+# Personal setup notes (real IPs, paths)
+*.local.md
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Claude Code local files
+.claude/settings.local.json
+.claude/test-results/

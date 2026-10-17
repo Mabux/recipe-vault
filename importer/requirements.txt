@@ -1,0 +1,8 @@
+anthropic>=1.0
+pyyaml
+pypdf
+openpyxl
+pillow
+pillow-heif
+tzdata
+pymupdf

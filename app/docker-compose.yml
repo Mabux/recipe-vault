@@ -1,0 +1,17 @@
+# recipe-vault web app. Configure via .env (see .env.example) or the Portainer stack env.
+services:
+  recipe-vault:
+    build: .
+    image: recipe-vault-app:latest
+    container_name: recipe-vault-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8095}:80"
+    environment:
+      GITEA_URL: ${GITEA_URL:?set GITEA_URL, e.g. http://192.168.1.10:3000 (not localhost)}
+      GITEA_REPO: ${GITEA_REPO:?set GITEA_REPO as owner/repo of your recipe data repo, e.g. your-user/recipe-vault-data}
+      GITEA_BRANCH: ${GITEA_BRANCH:-main}
+      GITEA_TOKEN: ${GITEA_TOKEN:?set GITEA_TOKEN (Gitea token with repository read access)}
+      # Optional. nginx needs a literal address at startup; without an importer,
+      # "+ Rezept" answers with an error (HTTP 502).
+      IMPORTER_URL: ${IMPORTER_URL:-http://127.0.0.1:8099}

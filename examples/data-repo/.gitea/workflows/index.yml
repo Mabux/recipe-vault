@@ -1,0 +1,41 @@
+# Regenerates INDEX.md whenever recipes change on main, no matter who pushed.
+# Runs on the repo-scoped act_runner on the NAS (label "host", no Docker),
+# so no marketplace actions — plain shell only.
+name: index
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "recipes/**"
+      - "scripts/build_index.py"
+
+jobs:
+  build-index:
+    runs-on: host
+    defaults:
+      run:
+        shell: sh
+    steps:
+      - name: Regenerate and commit INDEX.md
+        env:
+          TOKEN: ${{ secrets.GITEA_TOKEN }}
+          REPO: ${{ gitea.repository }}
+          # Repo variable CLONE_BASE_URL lets the runner clone over the LAN
+          # (e.g. http://192.168.1.10:3000); otherwise Gitea's own ROOT_URL is used.
+          CLONE_BASE: ${{ vars.CLONE_BASE_URL || gitea.server_url }}
+        run: |
+          set -e
+          command -v git >/dev/null && command -v python3 >/dev/null || apk add --no-cache git python3 >/dev/null
+          rm -rf repo
+          scheme="${CLONE_BASE%%://*}"; hostpath="${CLONE_BASE#*://}"
+          git clone --quiet --depth 1 --branch main "${scheme}://ci:${TOKEN}@${hostpath%/}/${REPO}.git" repo
+          cd repo
+          python3 scripts/build_index.py
+          if git diff --quiet -- INDEX.md; then echo "INDEX.md already up to date"; exit 0; fi
+          git -c user.name="recipe-vault bot" -c user.email="bot@recipe-vault.local" \
+            commit --quiet -m "index: regenerate INDEX.md" -- INDEX.md
+          # someone may have pushed meanwhile: rebase once and retry
+          git push --quiet origin HEAD:main || { git pull --quiet --rebase origin main && python3 scripts/build_index.py && git diff --quiet -- INDEX.md && git push --quiet origin HEAD:main; }
+          echo "INDEX.md updated"

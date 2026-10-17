@@ -1,0 +1,6 @@
+#!/bin/sh
+# Keep INDEX.md in sync with recipes/ in every local commit.
+# Enable once per clone: git config core.hooksPath .githooks
+# (The Gitea workflow .gitea/workflows/index.yml catches pushes from elsewhere.)
+git diff --cached --name-only | grep -qE '^(recipes/|scripts/build_index\.py$)' || exit 0
+python3 scripts/build_index.py >/dev/null && git add INDEX.md

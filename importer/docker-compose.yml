@@ -1,0 +1,38 @@
+# recipe-vault importer: inbox folder -> recipe Markdown (Claude) -> private data repo on Gitea.
+# Configure via .env (see .env.example) or the Portainer stack env.
+# Host folders under ${BASE} (default: next to this file):
+#   secrets/anthropic_api_key, secrets/deploy_key  (mode 600, written once at setup)
+#   data/                                          (state.json, log, working clone)
+# Inbox: the folder with incoming recipe files, mounted read-only.
+services:
+  importer:
+    build:
+      context: ..                   # repo root: the image also needs scripts/build_index.py
+      dockerfile: importer/Dockerfile
+    image: recipe-vault-importer:latest
+    container_name: recipe-vault-importer
+    restart: unless-stopped
+    user: "0:0"
+    ports:
+      - "${API_HOST_PORT:-8099}:8080"   # app import API, used by the recipe app's nginx
+    environment:
+      REPO_URL: ${REPO_URL:?set REPO_URL, the SSH clone URL of your data repo, e.g. ssh://git@192.168.1.10:2222/your-user/recipe-vault-data.git}
+      INTERVAL: ${INTERVAL:-300}
+      MAX_FILES_PER_SCAN: ${MAX_FILES_PER_SCAN:-10}
+      MODEL: ${MODEL:-claude-opus-5-5}
+      EFFORT: ${EFFORT:-medium}
+      MAX_JOBS_PER_HOUR: ${MAX_JOBS_PER_HOUR:-20}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}            # optional: "KI-Bild generieren" when editing
+      IMAGE_MODEL: ${IMAGE_MODEL:-gemini-2.5-flash-image}
+    volumes:
+      - ${INBOX_HOST_PATH:-./inbox}:/inbox:ro
+      - ${BASE:-.}/data:/data
+    secrets:
+      - anthropic_api_key
+      - deploy_key
+
+secrets:
+  anthropic_api_key:
+    file: ${BASE:-.}/secrets/anthropic_api_key
+  deploy_key:
+    file: ${BASE:-.}/secrets/deploy_key

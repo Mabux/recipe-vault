@@ -1,0 +1,94 @@
+# Recipe Vault — serves index.html and proxies read-only Gitea API calls.
+# ${GITEA_*} placeholders are filled from the container environment at start
+# (official nginx image: /etc/nginx/templates/*.template -> envsubst).
+# The token is added here, server-side; it never reaches the browser.
+
+# Server-side cache for recipe photos: each image is fetched from Gitea once.
+# Names contain a content hash, so cached files never go stale.
+proxy_cache_path /var/cache/nginx/images levels=1:2 keys_zone=images:10m max_size=1g inactive=365d use_temp_path=off;
+
+server {
+    listen 80;
+    server_name _;
+
+    # Docker's DNS, needed if GITEA_URL uses a hostname instead of an IP
+    resolver 127.0.0.11 valid=30s ipv6=off;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location = / {
+        add_header Cache-Control "no-cache";
+        try_files /index.html =404;
+    }
+
+    # Favicon, home-screen icons and web manifest (static files from the image)
+    location ~ "^/(favicon\.svg|icons/[a-z0-9-]+\.png)$" {
+        add_header Cache-Control "public, max-age=86400";
+    }
+
+    # nginx's mime.types has no entry for .webmanifest
+    location = /manifest.webmanifest {
+        types { }
+        default_type application/manifest+json;
+        add_header Cache-Control "no-cache";
+    }
+
+    # File list of the repo branch
+    location = /gitea/tree {
+        limit_except GET { deny all; }
+        proxy_set_header Authorization "token ${GITEA_TOKEN}";
+        proxy_set_header Accept "application/json";
+        proxy_pass ${GITEA_URL}/api/v1/repos/${GITEA_REPO}/git/trees/${GITEA_BRANCH}?recursive=true&per_page=10000;
+    }
+
+    # Single file content by blob SHA (immutable, so cacheable forever)
+    location ~ "^/gitea/blob/([0-9a-f]{40,64})$" {
+        limit_except GET { deny all; }
+        proxy_set_header Authorization "token ${GITEA_TOKEN}";
+        proxy_set_header Accept "application/json";
+        proxy_pass ${GITEA_URL}/api/v1/repos/${GITEA_REPO}/git/blobs/$1;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+    }
+
+    # recipes/ of the branch as one .tar.gz (~100 KB) — the app's main data source:
+    # one request instead of one per recipe; images stay out of it
+    location = /gitea/archive {
+        limit_except GET { deny all; }
+        proxy_set_header Authorization "token ${GITEA_TOKEN}";
+        proxy_pass ${GITEA_URL}/api/v1/repos/${GITEA_REPO}/archive/${GITEA_BRANCH}.tar.gz?path=recipes;
+        add_header Cache-Control "no-cache";
+    }
+
+    # Recipe photos (images/<slug>-<hash>.webp). The hash changes with the
+    # content, so browsers may keep them forever.
+    location ~ "^/gitea/media/(images/[A-Za-z0-9._-]+\.(webp|jpg|jpeg|png))$" {
+        limit_except GET { deny all; }
+        proxy_set_header Authorization "token ${GITEA_TOKEN}";
+        proxy_pass ${GITEA_URL}/api/v1/repos/${GITEA_REPO}/media/$1?ref=${GITEA_BRANCH};
+        proxy_cache images;
+        proxy_cache_key $uri;
+        proxy_cache_valid 200 365d;
+        proxy_cache_lock on;
+        proxy_ignore_headers Cache-Control Expires Set-Cookie;
+        add_header X-Cache $upstream_cache_status;
+        proxy_hide_header Cache-Control;
+        proxy_hide_header Content-Security-Policy;
+        proxy_hide_header Content-Disposition;
+        proxy_hide_header Set-Cookie;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+    }
+
+    # Adding recipes from the app: forwarded to the importer (OneDrive importer
+    # container), which runs the same pipeline as for OneDrive files.
+    location /api/import/ {
+        client_max_body_size 31m;
+        proxy_request_buffering on;
+        proxy_read_timeout 120s;
+        proxy_pass ${IMPORTER_URL};
+    }
+
+    location / {
+        return 404;
+    }
+}
