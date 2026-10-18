@@ -65,7 +65,17 @@ class Api:
         return {e["path"]: e["sha"] for e in json.loads(self.raw("/gitea/tree"))["tree"] if e["type"] == "blob"}
 
     def file(self, path: str, tree: dict[str, str] | None = None) -> str:
-        sha = (tree or self.tree())[path]
+        if path.startswith("recipes/"):
+            # recipes come from the archive: Gitea's tree listing stops at 1000 entries
+            for attempt in range(6):  # a just-pushed file can take a moment to show up
+                text = self.recipes().get(path)
+                if text is not None:
+                    return text
+                time.sleep(5)
+            raise FileNotFoundError(path)
+        sha = (tree or self.tree()).get(path)
+        if not sha:
+            raise FileNotFoundError(path)
         return base64.b64decode(json.loads(self.raw(f"/gitea/blob/{sha}"))["content"]).decode("utf-8")
 
     def recipes(self) -> dict[str, str]:
@@ -79,9 +89,12 @@ class Api:
         return out
 
     def wait(self, job: dict) -> dict:
-        while job.get("id") and job["status"] not in DONE:
+        while job.get("id") and job.get("status") not in DONE:
             time.sleep(5)
-            job = self.call("GET", f"jobs/{job['id']}")[1]
+            code, new = self.call("GET", f"jobs/{job['id']}")
+            if code == 404:  # importer restarted, job lost -> try again in a later run
+                return {"status": "failed", "message": "Auftrag verloren (Importer neu gestartet)"}
+            job = new
         return job
 
 
@@ -142,7 +155,10 @@ def with_tags(md: str, cookbooks: list[str]) -> str:
 def tag(api: Api, path: str, cookbooks: list[str], dry: bool) -> str:
     if not cookbooks:
         return "keine Kochbücher"
-    current = api.file(path)
+    try:
+        current = api.file(path)
+    except (FileNotFoundError, OSError, ValueError) as e:
+        return f"Taggen fehlgeschlagen: {type(e).__name__}: {e}"
     new = with_tags(current, cookbooks)
     if new == current:
         return "Tags schon vorhanden"
