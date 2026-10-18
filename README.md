@@ -441,6 +441,16 @@ python3 scripts/backfill_photos.py ../recipe-vault-data --api http://192.168.1.1
 
 Pull the data repo first, so the list of recipes is current.
 
+### Importing saved Chefkoch recipes
+
+`scripts/chefkoch_import.py` (Python standard library only) imports the links in `import/chefkoch-links.json` of the data repo (`[{"url", "title", "cookbooks"}]`, e.g. exported from *Mein Kochbuch* on chefkoch.de) through the same API as **+ Rezept → Link** in the app, one at a time. Each Chefkoch cookbook becomes a tag: its name goes lowercase into `keywords` (the app's tag filter) and unchanged into an extra `cookbooks:` line. Recipes already in the vault (same Chefkoch recipe id in `source_url`) are only tagged.
+
+```bash
+python3 scripts/chefkoch_import.py --api https://recipe-vault.example --limit 20
+```
+
+`--limit` counts new imports (each is one Claude call); `--cookbook Kuchen` restricts the run to one cookbook, `--dry-run` only shows the plan. The importer's hourly limit (`MAX_JOBS_PER_HOUR`) applies; on HTTP 429 the script waits and retries. Running it again continues where it stopped; `chefkoch-import-state.json` logs every link.
+
 ---
 
 ## Keeping INDEX.md up to date
